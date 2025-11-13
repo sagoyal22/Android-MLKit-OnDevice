@@ -48,10 +48,16 @@ dependencies {
     // --- TODO: ML Kit Dependencies (On-Device Models) ---
 
     // 1. Text Recognition
+    implementation("com.google.mlkit:text-recognition:16.0.1")
+
 
     // 2. Face Detection
+    implementation("com.google.mlkit:face-detection:16.1.7")
+
 
     // 3. Image Labeling
+    implementation("com.google.mlkit:image-labeling:17.0.9")
+
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
