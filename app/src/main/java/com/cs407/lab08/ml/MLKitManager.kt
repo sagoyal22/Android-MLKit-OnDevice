@@ -91,10 +91,57 @@ class MLKitManager {
         val image = InputImage.fromBitmap(bitmap, 0)
 
         return suspendCancellableCoroutine { continuation ->
-            // TODO: Implement face detection using faceDetector.process(image)
-            // - Extract bounding box, smile probability, and contours for each face
-            // - Return List<FaceDetectionResult> with face data
-            // - Handle failures and return empty list
+            faceDetector.process(image)
+                .addOnSuccessListener { faces ->
+                    val results = faces.map { face ->
+                        val box = face.boundingBox
+
+                        // 2. Smiling probability
+                        val smileProb = face.smilingProbability ?: 0f
+                        val isSmiling = smileProb >= 0.5f
+
+                        val contourTypes = listOf(
+                            FaceContour.FACE,
+                            FaceContour.LEFT_EYEBROW_TOP,
+                            FaceContour.LEFT_EYEBROW_BOTTOM,
+                            FaceContour.RIGHT_EYEBROW_TOP,
+                            FaceContour.RIGHT_EYEBROW_BOTTOM,
+                            FaceContour.LEFT_EYE,
+                            FaceContour.RIGHT_EYE,
+                            FaceContour.UPPER_LIP_TOP,
+                            FaceContour.UPPER_LIP_BOTTOM,
+                            FaceContour.LOWER_LIP_TOP,
+                            FaceContour.LOWER_LIP_BOTTOM
+                        )
+
+                        val allContours = mutableListOf<List<Int>>()
+
+                        contourTypes.forEach { type ->
+                            val contour = face.getContour(type)
+                            if (contour != null && contour.points.isNotEmpty()) {
+                                val intList = contour.points.flatMap { point ->
+                                    listOf(point.x.toInt(), point.y.toInt())
+                                }
+                                allContours.add(intList)
+                            }
+                        }
+
+
+                        // 4. Result object
+                        FaceDetectionResult(
+                            boundingBox = box,
+                            isSmiling = isSmiling,
+                            smileProbability = smileProb,
+                            contours = allContours
+                        )
+                    }
+
+                    continuation.resume(results)
+                }
+                .addOnFailureListener { e ->
+                    continuation.resume(emptyList())
+                }
+            
         }
     }
 // -----------------------------------------------------------------------------------
