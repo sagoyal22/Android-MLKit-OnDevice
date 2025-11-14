@@ -24,12 +24,53 @@ class MLKitManager {
     suspend fun runTextRecognition(bitmap: Bitmap): TextRecognitionResult {
         val image = InputImage.fromBitmap(bitmap, 0)
 
+
         return suspendCancellableCoroutine { continuation ->
-            // TODO: Implement text recognition using textRecognizer.process(image)
-            // - Extract fullText from visionText.text
-            // - Create bounding boxes from text blocks
-            // - Return TextRecognitionResult(fullText, boxes)
-            // - Handle failures and return TextRecognitionResult with error message
+            textRecognizer.process(image)
+                .addOnSuccessListener { visionText ->
+                    val fullText = visionText.text ?: ""
+
+                    // 1. Collect ALL line-level bounding boxes
+                    val allRects = mutableListOf<Rect>()
+
+                    for (block in visionText.textBlocks) {
+                        for (line in block.lines) {
+                            line.boundingBox?.let { allRects.add(it) }
+                        }
+                    }
+
+                    if (allRects.isEmpty()) {
+                        continuation.resume(
+                            TextRecognitionResult(
+                                text = "No text detected.",
+                                boundingBoxes = emptyList()
+                            )
+                        )
+                        return@addOnSuccessListener
+                    }
+
+                    val minLeft = allRects.minOf { it.left }
+                    val minTop = allRects.minOf { it.top }
+                    val maxRight = allRects.maxOf { it.right }
+                    val maxBottom = allRects.maxOf { it.bottom }
+
+                    val unionRect = Rect(minLeft, minTop, maxRight, maxBottom)
+
+                    continuation.resume(
+                        TextRecognitionResult(
+                            text = fullText,
+                            boundingBoxes = listOf(unionRect)
+                        )
+                    )
+                }
+                .addOnFailureListener { e ->
+                    continuation.resume(
+                        TextRecognitionResult(
+                            text = "Error: ${e.message}",
+                            boundingBoxes = emptyList()
+                        )
+                    )
+                }
         }
     }
 
