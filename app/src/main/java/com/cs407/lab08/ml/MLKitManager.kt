@@ -141,7 +141,7 @@ class MLKitManager {
                 .addOnFailureListener { e ->
                     continuation.resume(emptyList())
                 }
-            
+
         }
     }
 // -----------------------------------------------------------------------------------
@@ -153,10 +153,27 @@ class MLKitManager {
         val image = InputImage.fromBitmap(bitmap, 0)
 
         return suspendCancellableCoroutine { continuation ->
-            // TODO: Implement image labeling using imageLabeler.process(image)
-            // - Map labels to strings with format: "label (confidence%)"
-            // - Return list of label strings
-            // - Handle failures and return error message list
+            imageLabeler.process(image)
+                .addOnSuccessListener { labels ->
+
+                    if (labels.isEmpty()) {
+                        continuation.resume(listOf("No labels detected."))
+                        return@addOnSuccessListener
+                    }
+
+                    val formatted = labels.map { label ->
+                        val percent = label.confidence * 100
+                        val formattedPercent = String.format("%.2f", percent)
+                        "${label.text} (${formattedPercent}%)"
+                    }
+
+                    continuation.resume(formatted)
+                }
+                .addOnFailureListener { e ->
+                    continuation.resume(listOf("Error: ${e.message}"))
+                }
+
+
         }
     }
 }
